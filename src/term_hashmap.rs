@@ -205,7 +205,7 @@ impl TermHashMap {
             self.resize();
         }
         let key_bytes: &[u8] = key.as_ref();
-        let hash = murmurhash2(key.as_ref());
+        let hash = murmurhash2(key_bytes);
         let mut probe = self.probe(hash);
         loop {
             let bucket = probe.next_probe();
@@ -218,7 +218,9 @@ impl TermHashMap {
                 let key_addr = self.heap.allocate_space(num_bytes);
                 {
                     let data = self.heap.slice_mut(key_addr, num_bytes);
-                    data[..2].copy_from_slice(&(key_bytes.len() as u16).to_ne_bytes() );
+                    let key_bytes_len = key_bytes.len();
+                    assert!(key_bytes_len < 65536, "keys are required to be shorter than 65535 bytes");
+                    data[..2].copy_from_slice(&(key_bytes_len as u16).to_ne_bytes() );
                     let stop = 2 + key_bytes.len();
                     data[2..stop].copy_from_slice(key_bytes);
                     store(&mut data[stop..], val);
